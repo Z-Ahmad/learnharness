@@ -46,6 +46,7 @@ import {
 } from "@/src/core";
 import { PlanBlock, PlanPopup, latestTree } from "@/components/plan-block";
 import { PlanMarginalia, planExists } from "@/components/plan-window";
+import { SketchChip, SketchPanel, useSketchPanel } from "@/components/sketch-panel";
 import { MermaidOverlay, SessionMermaidContext } from "@/components/session-overlay";
 import { AbortTurnDialog, type AbortMode } from "@/components/abort-turn-dialog";
 import { ArrowRightIcon, DumbbellIcon, WaypointsIcon } from "lucide-react";
@@ -809,6 +810,8 @@ export function Chat({
 	// The live plan popup (wave 4): opened by any transcript plan block, the
 	// top-bar plan chip, and the dock band's marginalia.
 	const [planOpen, setPlanOpen] = useState(false);
+	// Fork: the per-session Excalidraw sketch (components/sketch-panel.tsx).
+	const sketch = useSketchPanel();
 	// Real plan presence — gates the marginalia's clickable flank. A JSX
 	// element is always truthy; gating on the node alone mounted a phantom
 	// (invisible, clickable) button in the bottom-right whenever a question
@@ -1269,6 +1272,7 @@ export function Chat({
 							<div className="min-w-4 flex-1" aria-hidden="true" />
 					</>
 					)}
+					<SketchChip open={sketch.open} onToggle={sketch.toggle} />
 					{/* The plan chip (owner, plan-placement round): session-level
 					    structure beside the phase chip — access to the full-DAG popup
 					    at every width; the marginalia is the wide-screen glance view. */}
@@ -1688,6 +1692,7 @@ export function Chat({
 				<AbortTurnDialog mode={abortAsk} onClose={() => setAbortAsk(null)} onConfirm={confirmAbort} busy={busy} />
 				</div>
 			</div>
+			{sketch.open && <SketchPanel chatId={chatId} onClose={() => sketch.setOpen(false)} />}
 		</div>
 		</JobsContext.Provider>
 		</SessionMermaidContext.Provider>
