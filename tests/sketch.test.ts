@@ -73,3 +73,65 @@ describe("/api/chats/:id/sketch", () => {
 after(() => {
 	fs.rmSync(TMP_DATA, { recursive: true, force: true });
 });
+
+// ── Snapshots: the PNG route and attaching a changed sketch to the next input ──
+
+describe("sketch snapshots → the teacher", async () => {
+	const { attachSketch } = await import("../src/server/sketch-attach.ts");
+	const { newAnswerResult, newUserMessage } = await import("../src/core/native-messages.ts");
+	const { projectView } = await import("../src/core/view.ts");
+	const { SKETCH_CAPTION_NOTE } = await import("../src/core/sketch-caption.ts");
+	const snapshotRoute = await import("../app/api/chats/[id]/sketch/snapshot/route.ts");
+
+	const png = (tag: string) => Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from(tag)]);
+	const putPng = (id: string, body: Buffer) => snapshotRoute.PUT(new Request("http://x", { method: "PUT", body }), params(id));
+	type Block = { type: string; text?: string; data?: string; mimeType?: string };
+	const blocksOf = (m: unknown) => (m as { content: Block[] }).content;
+
+	it("the snapshot route stores PNGs, refuses anything else, and DELETE clears it", async () => {
+		const chat = createChat("Snap route");
+		assert.equal((await putPng(chat.id, png("a"))).status, 204);
+		assert.equal((await snapshotRoute.PUT(new Request("http://x", { method: "PUT", body: "<svg/>" }), params(chat.id))).status, 400);
+		assert.equal((await putPng("nope", png("a"))).status, 404);
+		assert.equal((await snapshotRoute.DELETE(new Request("http://x"), params(chat.id))).status, 204);
+		assert.equal(attachSketch(chat.id, "text", [newUserMessage("hi")])[0].content, "hi", "no snapshot, nothing attached");
+	});
+
+	it("attaches a changed snapshot to a text message once, with typed canvas text in the caption", async () => {
+		const chat = createChat("Snap text");
+		writeSketch(chat.id, JSON.stringify({ type: "excalidraw", elements: [{ type: "text", text: "P(A|B) = 0.3" }, { type: "freedraw" }], appState: {}, files: {} }));
+		await putPng(chat.id, png("one"));
+
+		const [msg] = attachSketch(chat.id, "text", [newUserMessage("does this look right?")]);
+		const blocks = blocksOf(msg);
+		assert.deepEqual(blocks.map((b) => b.type), ["text", "text", "image"]);
+		assert.equal(blocks[0].text, "does this look right?");
+		assert.ok(blocks[1].text?.startsWith("[Sketch attached]"));
+		assert.ok(blocks[1].text?.includes("P(A|B) = 0.3"), "typed text is spelled out");
+		assert.equal(blocks[2].mimeType, "image/png");
+		assert.equal(Buffer.from(blocks[2].data ?? "", "base64").toString("latin1"), png("one").toString("latin1"));
+
+		assert.equal(attachSketch(chat.id, "text", [newUserMessage("again")])[0].content, "again", "unchanged sketch is not resent");
+		await putPng(chat.id, png("two"));
+		assert.equal(blocksOf(attachSketch(chat.id, "text", [newUserMessage("changed")])[0]).length, 3, "a changed sketch goes again");
+	});
+
+	it("rides an answer's tool result, but never a continue", async () => {
+		const chat = createChat("Snap answer");
+		await putPng(chat.id, png("ans"));
+		assert.deepEqual(attachSketch(chat.id, "continue", []), []);
+		const result = newAnswerResult("call_1", "quiz", { kind: "quiz", answers: [], correct: true });
+		const [withSketch] = attachSketch(chat.id, "answer", [result]);
+		assert.deepEqual(blocksOf(withSketch).map((b) => b.type), ["text", "text", "image"]);
+		assert.deepEqual((withSketch as { details?: unknown }).details, result.details, "the answer record itself is untouched");
+	});
+
+	it("the transcript shows a short note instead of the caption", async () => {
+		const chat = createChat("Snap view");
+		await putPng(chat.id, png("view"));
+		const [msg] = attachSketch(chat.id, "text", [newUserMessage("look")]);
+		const view = projectView([msg]);
+		const texts = view[0].parts.map((p) => (p as { text?: string }).text);
+		assert.deepEqual(texts, ["look", SKETCH_CAPTION_NOTE]);
+	});
+});

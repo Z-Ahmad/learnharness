@@ -31,6 +31,7 @@ import {
 	type LiveExecution,
 	type QuestionAnswerData,
 } from "../src/core";
+import { flushSketch } from "./sketch-flush.ts";
 
 export type SessionStatus = "ready" | "submitted" | "streaming" | "error";
 
@@ -307,6 +308,9 @@ export class SessionModel {
 	 *  never persisted (write-ahead happens only on acceptance), so the
 	 *  retry waits out the running turn and re-POSTs the SAME body. */
 	async postInputEvent(input: ChatInput, signal?: AbortSignal): Promise<Response> {
+		// Fork: land a pending sketch save first, so the teacher sees the
+		// stroke drawn just before Submit (components/sketch-flush.ts).
+		await flushSketch();
 		const body = JSON.stringify({ chatId: this.chatId, input });
 		const init: RequestInit = {
 			method: "POST",

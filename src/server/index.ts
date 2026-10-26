@@ -14,7 +14,7 @@ export * from "./jobs.ts";
 export * from "./stores.ts";
 export { readRenderSettings, writeRenderSettings } from "../store/render-settings.ts";
 // Fork: the per-session Excalidraw sketch (components/sketch-panel.tsx).
-export { readSketch, writeSketch } from "../store/sketches.ts";
+export { deleteSnapshot, readSketch, writeSketch, writeSnapshot } from "../store/sketches.ts";
 // The settings record + prompt overrides (settings-storage wave, 2026-09-19).
 // The *Record aliases keep the app/api/settings routes explicit about which
 // seam they touch (the raw record, not the chat-section convenience view).

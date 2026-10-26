@@ -37,6 +37,7 @@ import type { LhMarkerMessage, LhMessage } from "./native-messages.ts";
 import { modelSolutionForConclude, PRACTICE_CONCLUDE_TOOL, problemInputForConclude } from "./native-messages.ts";
 import { activeCompactionOf, type CompactionDetails } from "./compaction.ts";
 import { QUESTION_TOOLS } from "./pending.ts";
+import { isSketchCaption, SKETCH_CAPTION_NOTE } from "./sketch-caption.ts";
 import type { SubagentArtifactData, SubagentResultMeta } from "./contracts/jobs.ts";
 import type { PlanBlockData } from "./contracts/chat.ts";
 
@@ -176,7 +177,8 @@ export function projectView(messages: readonly LhMessage[], live?: LiveTurnState
 				typeof content === "string"
 					? [content]
 					: content.filter((c) => c.type === "text").map((c) => (c as { text: string }).text);
-			out.push({ id: m.id, role: "user", parts: texts.map(textPart) });
+			// Fork: a sketch caption shows as a short note (src/core/sketch-caption.ts).
+			out.push({ id: m.id, role: "user", parts: texts.map((t) => textPart(isSketchCaption(t) ? SKETCH_CAPTION_NOTE : t)) });
 			continue;
 		}
 

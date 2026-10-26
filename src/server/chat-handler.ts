@@ -59,6 +59,7 @@ import {
 } from "../core/input-events.ts";
 import { steerDelivered } from "../core/contracts.ts";
 import type {CallUsage, SteerMessage} from "../core/contracts.ts";
+import { attachSketch } from "./sketch-attach.ts";
 
 /**
  * One chat turn over the server-owned native record. Framework-free (plain
@@ -301,6 +302,11 @@ export async function handleChatInput(
 		console.info(`[chat ${chatId}] turn already in flight — request rejected`);
 		return Response.json({ error: "A turn is already running for this session" }, { status: 409 });
 	}
+
+	// Fork: a changed sketch snapshot rides the learner's input to the teacher
+	// (src/server/sketch-attach.ts). After beginTurn, so a refused request
+	// never marks a snapshot as sent.
+	appends = attachSketch(chatId, input.type, appends);
 
 	// Write-ahead persistence: the input's native appends go on disk BEFORE
 	// the turn starts - the learner's answer is durable the instant the
