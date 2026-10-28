@@ -29,6 +29,17 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 			</div>
 		);
 	}
+	// Fork: a hint request (src/core/hint.ts) — the question comes back after the hint.
+	if (answer.hintRequested) {
+		return (
+			<div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground" data-testid="hint-requested-card">
+				<span className="font-medium">{answer.questionText}</span> — hint requested
+				{(answer.thinking ?? answer.note) && (
+					<ThinkingBlock testId="hint-thinking-block" label="YOUR THINKING" text={(answer.thinking ?? answer.note) as string} defaultOpen />
+				)}
+			</div>
+		);
+	}
 
 	const isQuiz = answer.kind === "quiz";
 	const isExplain = answer.kind === "explain";

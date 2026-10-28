@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownIcon, ChevronRightIcon, PlayIcon } from "lucide-react";
+import { ArrowDownIcon, ChevronRightIcon, LightbulbIcon, PlayIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { finishDictation, isDictationActive, joinDictation, useDictationTarget } from "@/components/dictation";
 import { useEnterSubmits } from "@/components/enter-submits";
@@ -9,6 +9,8 @@ import { ToolContentResponse } from "@/components/ai-elements/message";
 import { cn } from "@/lib/utils";
 import {
 	buildAnswer,
+	canRequestHint,
+	hintRequestAnswer,
 	repairMathForDisplay,
 	normalizeQuizType,
 	CONFIDENCE_STOPS,
@@ -411,6 +413,20 @@ function QuestionDockForm({
 			confidenceIndex: confIdx,
 		});
 		onSubmit(buildAnswer(qd, req, toolName));
+	};
+
+	/* Fork: the Hint button (src/core/hint.ts) — a request, not an answer.
+	 * Same dictation-flush law as submit; whatever he has written so far
+	 * rides along so the teacher can aim the hint. */
+	const hintable = canRequestHint(kind, phase);
+	const requestHint = () => {
+		const send = () =>
+			onSubmit(hintRequestAnswer(qd, toolName, qd.mode === "text" ? answerTextRef.current : thinkingTextRef.current));
+		if (!isDictationActive()) {
+			send();
+			return;
+		}
+		void finishDictation().then(send);
 	};
 
 	/* ENTER SUBMITS FROM ANYWHERE (owner round 6, 2026-10-05): the same
@@ -918,10 +934,24 @@ function QuestionDockForm({
 						<span aria-hidden className="pl-1.5 text-xs text-muted-foreground">
 								{compactionRunning ? "compacting session…" : "↵ submits · ⇧↵ newline"}
 						</span>
+						{hintable && (
+							<Button
+								type="button"
+								variant="outline"
+								data-testid="hint-button"
+								title="Ask the teacher for one nudge. The question comes back after it."
+								disabled={compactionRunning}
+								onClick={requestHint}
+								className="ml-auto h-9 gap-1.5 rounded-[6px] px-3 text-sm font-medium"
+							>
+								<LightbulbIcon className="size-4" aria-hidden />
+								Hint
+							</Button>
+						)}
 						<Button
 							type="submit"
 							disabled={!canSubmit || compactionRunning}
-							className="ml-auto h-9 rounded-[6px] px-3.5 text-sm font-medium"
+							className={cn("h-9 rounded-[6px] px-3.5 text-sm font-medium", !hintable && "ml-auto")}
 						>
 							Submit answer
 						</Button>

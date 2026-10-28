@@ -468,6 +468,8 @@ export interface QuestionAnswerData {
 	committed?: string; // explain only (rendering): the model's committed answer
 	explanation?: string; // quiz only (rendering)
 	dismissed?: boolean;
+	/** Fork: the Hint button — a request, not an answer (src/core/hint.ts). */
+	hintRequested?: boolean;
 	answeredAt: string;
 }
 
@@ -778,6 +780,8 @@ export function dismissedAnswer(kind: QuestionKind, questionText: string): Quest
 
 export function compactAnswerForModel(ad: QuestionAnswerData): Record<string, unknown> {
 	if (ad.dismissed) return { kind: ad.kind, dismissed: true };
+	// Fork: a hint request carries only the flag and his thinking so far.
+	if (ad.hintRequested) return { kind: ad.kind, hintRequested: true, ...((ad.thinking ?? ad.note) ? { thinking: ad.thinking ?? ad.note } : {}), ...(ad.readingThinking ? { thinkingWhileReading: ad.readingThinking } : {}) };
 	const out: Record<string, unknown> = { kind: ad.kind };
 	if (ad.dontKnow) out.dontKnow = true;
 	// Array.isArray: the seam is called with `unknown` answers (test
