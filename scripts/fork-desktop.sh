@@ -20,6 +20,9 @@ fi
 
 export LH_DATA_DIR="$APP_SUPPORT/data"
 export LH_AUTH_FILE="$APP_SUPPORT/auth.json"
+# A teaching question never lands with its explanation or hint hidden in
+# thinking (upstream #281; src/agent/visible-text-guard.ts).
+export LH_VISIBLE_TEXT_GUARD=1
 
 exec npx concurrently -k --names next,electron \
 	"next dev -H 127.0.0.1 -p $PORT" \

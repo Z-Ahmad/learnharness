@@ -33,7 +33,8 @@ export function AnsweredCard({ answer: savedAnswer, input }: { answer: QuestionA
 	if (answer.hintRequested) {
 		return (
 			<div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground" data-testid="hint-requested-card">
-				<span className="font-medium">{answer.questionText}</span> — hint requested
+				<div className="mb-1 text-xs font-medium uppercase tracking-wide">Hint requested</div>
+				<ToolContentResponse>{answer.questionText}</ToolContentResponse>
 				{(answer.thinking ?? answer.note) && (
 					<ThinkingBlock testId="hint-thinking-block" label="YOUR THINKING" text={(answer.thinking ?? answer.note) as string} defaultOpen />
 				)}
